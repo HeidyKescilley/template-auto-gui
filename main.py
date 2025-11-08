@@ -12,7 +12,8 @@ from automation_helpers import (
     type_text,
     esperar_imagem,
     esperar_imagem_desaparecer,
-    imagem_esta_presente
+    imagem_esta_presente,
+    click_relative
 )
 
 # Funções de notificação e performance
@@ -49,6 +50,11 @@ if __name__ == "__main__":
         
         # --- Início da Lógica da Automação ---
         # Aqui é onde a magica acontece!
+        time.sleep(2)
+        
+        click_relative("periodo.png", x=90, y=0)
+
+        time.sleep(5)
         
         df = pd.read_excel("./dados_fiscais.xlsx")
         

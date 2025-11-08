@@ -277,3 +277,45 @@ def type_text(text, interval=0.05):
     """Digita texto de forma mais 'humana' (com intervalo)."""
     logging.info(f"Digitando: '{text[:20]}...'")
     pyautogui.write(text, interval=interval)
+
+def click_relative(image_name: str, 
+                            x: int, 
+                            y: int, 
+                            timeout=DEFAULT_WAIT_TIMEOUT, 
+                            confidence=DEFAULT_CONFIDENCE,
+                            region=None,
+                            grayscale=DEFAULT_GRAYSCALE):
+    """
+    Encontra uma imagem-âncora e clica em um ponto relativo (offset) a ela.
+    
+    Ex: Encontra 'label_nome.png' e clica 150 pixels à direita (x=150).
+    """
+    logging.info(f"Tentando clique relativo: '{image_name}' com offset (x={x}, y={y})")
+    
+    try:
+        # 1. Encontra o centro da imagem-âncora
+        anchor_coords = esperar_imagem(
+            image_name, 
+            timeout_segundos=timeout, 
+            confianca=confidence, 
+            region=region, 
+            grayscale=grayscale
+        )
+        
+        # 2. Calcula as coordenadas do alvo
+        # anchor_coords é um Point(x, y)
+        target_x = anchor_coords.x + x
+        target_y = anchor_coords.y + y
+        
+        target_coords = (target_x, target_y)
+        
+        # 3. Usa o safe_click para clicar no alvo (com log e histórico)
+        log_msg = f"clique_relativo: {image_name} (+{x}, +{y})"
+        safe_click(target_coords, log_message=log_msg)
+        
+        return True
+        
+    except (TimeoutError, FileNotFoundError):
+        # O erro já foi logado por 'esperar_imagem'
+        logging.warning(f"Imagem âncora '{image_name}' não encontrada. Clique relativo cancelado.")
+        return False
