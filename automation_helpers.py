@@ -8,7 +8,7 @@ from config import (
     GLOBAL_PAUSE, ENABLE_FAILSAFE, DEFAULT_CONFIDENCE, 
     DEFAULT_WAIT_TIMEOUT, CLICK_HISTORY_DIR, ENABLE_CLICK_HISTORY,
     CLICK_CAPTURE_PADDING, COORDINATE_MAP_FILE, LOG_FILE, LOG_LEVEL,
-    LOG_DIR, IMAGE_DIR, DEFAULT_GRAYSCALE, ERROR_DIR
+    LOG_DIR, IMAGE_DIR, DEFAULT_GRAYSCALE, ERROR_DIR, DEFAULT_DISAPPEAR_STABILITY
 )
 
 # --- 1. Setup Inicial e "Base de Logging" ---
@@ -133,9 +133,130 @@ def esperar_imagem(image_name: str,
             else:
                  logging.error(f"Erro inesperado no locateOnScreen: {e}")
         time.sleep(0.5)
-        
+    
+    time.sleep(1.5)
     logging.error(f"Timeout! Imagem '{image_name}' não foi encontrada em {timeout_segundos}s.")
     raise TimeoutError(f"A imagem '{image_name}' não foi encontrada em {timeout_segundos}s.")
+
+def esperar_imagem_desaparecer(image_name: str, 
+                               timeout_segundos: int = DEFAULT_WAIT_TIMEOUT, 
+                               region: tuple = None, 
+                               confianca: float = DEFAULT_CONFIDENCE,
+                               grayscale: bool = DEFAULT_GRAYSCALE,
+                               stability_check_sec: float = DEFAULT_DISAPPEAR_STABILITY):
+    """
+    Aguarda até que uma imagem NÃO seja mais encontrada na tela por um período
+    estável, lançando TimeoutError se ela persistir.
+    """
+    caminho_imagem = os.path.join(IMAGE_DIR, image_name)
+    
+    if not os.path.exists(caminho_imagem):
+        logging.warning(f"Arquivo de imagem não encontrado: {caminho_imagem}. Considerando 'desaparecida'.")
+        return True 
+
+    logging.info(f"Aguardando imagem DESAPARECER: '{image_name}' (Timeout: {timeout_segundos}s)")
+    
+    inicio = time.time()
+    disappeared_timestamp = None 
+
+    while time.time() - inicio < timeout_segundos:
+        # 1. Reseta o status a cada loop
+        image_found = False 
+        
+        try:
+            # 2. Tenta localizar a imagem
+            localizacao = pyautogui.locateCenterOnScreen(
+                caminho_imagem, 
+                confidence=confianca, 
+                grayscale=grayscale, 
+                region=region
+            )
+            if localizacao:
+                # 3. SÓ SETA True SE REALMENTE ACHAR
+                image_found = True
+
+        except pyautogui.PyAutoGUIException:
+            # Erro temporário de screenshot. Assume 'não encontrada' e deixa o loop tentar de novo.
+            logging.debug("PyAutoGUIException (temporário) ao localizar. Tentando de novo...")
+            # 'image_found' permanece False, o que é o correto
+            
+        except Exception as e:
+            # CORREÇÃO: Erro inesperado (como tela minimizada). 
+            # Loga o erro completo e assume 'não encontrada'.
+            
+            # (Adicionado exc_info=True para vermos o erro real, não só uma linha em branco)
+            logging.error(f"Erro inesperado no locateOnScreen. Assumindo que a imagem sumiu.", exc_info=True)
+            
+            # 'image_found' permanece False, o que é o correto
+
+        # --- Lógica de Estabilidade (Agora funciona com erros) ---
+        
+        if image_found:
+            # IMAGEM ESTÁ VISÍVEL.
+            # Reseta o timer de estabilidade.
+            disappeared_timestamp = None
+            logging.debug(f"Imagem '{image_name}' ainda está visível.")
+        else:
+            # IMAGEM NÃO ESTÁ VISÍVEL (ou um erro ocorreu)
+            if disappeared_timestamp is None:
+                # Primeira vez que não a vemos. Inicia o timer.
+                logging.debug(f"Imagem '{image_name}' desapareceu (ou erro). Iniciando verificação de estabilidade...")
+                disappeared_timestamp = time.time()
+            else:
+                # Já estamos na verificação.
+                elapsed_since_disappeared = time.time() - disappeared_timestamp
+                if elapsed_since_disappeared >= stability_check_sec:
+                    # SUCESSO! A imagem sumiu (ou erro persistiu) pelo tempo de estabilidade.
+                    logging.info(f"Imagem '{image_name}' desapareceu com sucesso (estável por {stability_check_sec}s).")
+                    return True
+        
+        time.sleep(0.5)
+        
+    # Se o loop terminar (Timeout):
+    logging.error(f"Timeout! Imagem '{image_name}' AINDA ESTÁ VISÍVEL após {timeout_segundos}s.")
+    raise TimeoutError(f"A imagem '{image_name}' não desapareceu em {timeout_segundos}s.")
+
+def imagem_esta_presente(image_name: str, 
+                         timeout_segundos: int = DEFAULT_WAIT_TIMEOUT, 
+                         region: tuple = None, 
+                         confianca: float = DEFAULT_CONFIDENCE,
+                         grayscale: bool = DEFAULT_GRAYSCALE) -> bool:
+    """
+    Verifica se uma imagem está presente na tela dentro do timeout.
+    
+    Retorna True se a imagem for encontrada a tempo.
+    Retorna False se a imagem não for encontrada (Timeout) ou se o arquivo .png não existir.
+    
+    Esta função NUNCA lança um erro, permitindo o uso em condicionais (if/else).
+    """
+    try:
+        # Tenta chamar sua função original 'esperar_imagem'
+        # Se ela não lançar uma exceção, é porque encontrou a imagem.
+        esperar_imagem(
+            image_name, 
+            timeout_segundos, 
+            region, 
+            confianca, 
+            grayscale
+        )
+        # Se chegou até aqui, a imagem foi encontrada.
+        logging.info(f"Verificação (imagem_esta_presente): Imagem '{image_name}' FOI encontrada.")
+        return True
+        
+    except (TimeoutError, FileNotFoundError):
+        # Captura os dois erros que 'esperar_imagem' pode lançar:
+        # 1. TimeoutError: A imagem não apareceu.
+        # 2. FileNotFoundError: O arquivo .png nem existe no diretório.
+        
+        # Em ambos os casos, a imagem "não está presente" para o robô.
+        logging.info(f"Verificação (imagem_esta_presente): Imagem '{image_name}' NÃO foi encontrada (Timeout ou Arquivo Inexistente).")
+        return False
+        
+    except Exception as e:
+        # Captura qualquer outro erro inesperado (ex: problema de permissão)
+        # para garantir que o script não quebre.
+        logging.error(f"Erro inesperado ao verificar '{image_name}': {e}", exc_info=True)
+        return False
 
 # --- 5. Ações Combinadas ---
 def find_and_click(image_name: str, 

@@ -5,11 +5,6 @@ import logging
 GLOBAL_PAUSE = 0.4
 ENABLE_FAILSAFE = True
 
-# --- Configurações de Reconhecimento de Imagem ---
-DEFAULT_CONFIDENCE = 0.9
-DEFAULT_WAIT_TIMEOUT = 10 
-DEFAULT_GRAYSCALE = True 
-
 # --- Configurações de Paths (Caminhos) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IMAGE_DIR = os.path.join(BASE_DIR, 'images')
@@ -30,3 +25,9 @@ CLICK_CAPTURE_PADDING = 50
 # --- Configurações de Notificação ---
 TELEGRAM_ENABLED = True # Mude para False para desabilitar globalmente
 TELEGRAM_NOTIFICATION_TITLE = "Alerta de Automação RPA" # Título da notificação
+
+# --- Configurações de Reconhecimento de Imagem ---
+DEFAULT_CONFIDENCE = 0.9
+DEFAULT_WAIT_TIMEOUT = 30
+DEFAULT_GRAYSCALE = True
+DEFAULT_DISAPPEAR_STABILITY = 0.5 # <-- ADICIONE ESTA LINHA (Tempo em seg. para confirmar que a imagem sumiu)

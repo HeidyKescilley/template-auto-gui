@@ -1,5 +1,8 @@
 import logging
 from dotenv import load_dotenv 
+import pandas as pd
+import time
+import pyautogui as pg
 
 # Funções principais da automação
 from automation_helpers import (
@@ -7,7 +10,9 @@ from automation_helpers import (
     safe_click, 
     find_and_click, 
     type_text,
-    esperar_imagem
+    esperar_imagem,
+    esperar_imagem_desaparecer,
+    imagem_esta_presente
 )
 
 # Funções de notificação e performance
@@ -17,47 +22,7 @@ from reporting import (
     enviar_notificacao_telegram
 )
 
-# --- Lógica de Negócio (Exemplo) ---
-def fazer_login():
-    """Executa o processo de login."""
-    logging.info("Iniciando processo de login...")
-    
-    # Exemplo 1: Usando coordenadas do 'coordinates.json'
-    # safe_click("campo_usuario") 
-    # type_text("meu_usuario")
-    
-    # Exemplo 2: Usando imagens da pasta '/images/'
-    if not find_and_click("campo_usuario.png"):
-        raise Exception("Campo 'usuário' não encontrado. Abortando.")
-    type_text("meu_usuario_secreto")
-
-    if not find_and_click("campo_senha.png"):
-        raise Exception("Campo 'senha' não encontrado. Abortando.")
-    type_text("minha_senha_123")
-    
-    if not find_and_click("botao_login.png"):
-        raise Exception("Botão 'login' não encontrado. Abortando.")
-        
-    esperar_imagem("icone_dashboard.png", timeout_segundos=15)
-    logging.info("Login realizado com sucesso!")
-
-def processar_fatura(id_fatura):
-    """Executa a lógica de negócio principal para um item."""
-    logging.info(f"Processando fatura ID: {id_fatura}")
-    
-    find_and_click("menu_faturas.png")
-    find_and_click("campo_busca_fatura.png")
-    type_text(str(id_fatura))
-    find_and_click("botao_pesquisar_fatura.png")
-    
-    # Simula um erro na fatura 3
-    if id_fatura == 3:
-        logging.warning("Simulando um erro na fatura 3...")
-        find_and_click("imagem_que_nao_existe.png") # Isso vai falhar e ser capturado
-    
-    esperar_imagem("confirmacao_fatura.png")
-    find_and_click("botao_voltar_menu.png")
-    logging.info(f"Fatura {id_fatura} processada.")
+# --- Lógica de Negócio (funções aqui) ---
 
 
 # --- Ponto de Entrada Principal ---
@@ -75,25 +40,35 @@ if __name__ == "__main__":
     
     # 4. Inicializa o Timer de Performance
     timer = PerformanceTimer(human_time_per_iteration_sec=HUMAN_TIME_PER_TASK_SEC)
-    
-    faturas_para_processar = [1, 2, 3, 4, 5] # Lista de tarefas
 
+    time.sleep(3)
+    
     try:
         # 5. Inicia o Cronômetro
         timer.start()
         
         # --- Início da Lógica da Automação ---
-        fazer_login()
+        # Aqui é onde a magica acontece!
         
-        logging.info(f"Iniciando processamento de {len(faturas_para_processar)} faturas.")
+        df = pd.read_excel("./dados_fiscais.xlsx")
         
-        for fatura_id in faturas_para_processar:
-            processar_fatura(fatura_id)
-            
-            # 6. Registra a conclusão da iteração (importante!)
-            timer.lap() 
-            
-        logging.info("Todas as faturas foram processadas com sucesso.")
+        logging.info(f"Iniciando processamento de {len(df)} NCMs.")
+        
+        if 'ncm' not in df.columns or 'cst_entrada' not in df.columns:
+            print("Erro: O arquivo não contém as colunas 'ncm' e 'cst_entrada'.")
+            print(f"Colunas encontradas: {list(df.columns)}")
+        else:
+            # 2. Itera sobre cada linha do DataFrame
+            # A função iterrows() retorna o índice da linha e a linha (como um objeto)
+            for indice, linha in df.iterrows():
+                
+                # 3. Captura o conteúdo das colunas pelo nome
+                ncm = str(int(linha['ncm'])).zfill(8)
+                cst_entrada = str(int(linha['cst_entrada'])).zfill(2)
+                cst_saida = str(int(linha['cst_saida'])).zfill(2)
+                natureza = str(int(linha['natureza'])).zfill(3)
+                logging.info(f"Processando NCM: {ncm} | CST Entrada: {cst_entrada} | CST Saída: {cst_saida} | Natureza: {natureza}")
+                
 
     except Exception as e:
         # 7. CAPTURA DE ERRO E NOTIFICAÇÃO
