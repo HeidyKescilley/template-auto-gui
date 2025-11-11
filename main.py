@@ -50,32 +50,37 @@ if __name__ == "__main__":
         
         # --- Início da Lógica da Automação ---
         # Aqui é onde a magica acontece!
-        time.sleep(2)
         
-        click_relative("periodo.png", x=90, y=0)
-
-        time.sleep(5)
+        df = pd.read_excel("./empresas.xlsx")
         
-        df = pd.read_excel("./dados_fiscais.xlsx")
+        logging.info(f"Iniciando processamento de {len(df)} meses.")
         
-        logging.info(f"Iniciando processamento de {len(df)} NCMs.")
-        
-        if 'ncm' not in df.columns or 'cst_entrada' not in df.columns:
-            print("Erro: O arquivo não contém as colunas 'ncm' e 'cst_entrada'.")
+        if 'numero' not in df.columns or 'filial' not in df.columns:
+            print("Erro: O arquivo não contém as colunas 'numero' e 'filial'.")
             print(f"Colunas encontradas: {list(df.columns)}")
+            
+            time.sleep(2)
         else:
             # 2. Itera sobre cada linha do DataFrame
             # A função iterrows() retorna o índice da linha e a linha (como um objeto)
             for indice, linha in df.iterrows():
                 
                 # 3. Captura o conteúdo das colunas pelo nome
-                ncm = str(int(linha['ncm'])).zfill(8)
-                cst_entrada = str(int(linha['cst_entrada'])).zfill(2)
-                cst_saida = str(int(linha['cst_saida'])).zfill(2)
-                natureza = str(int(linha['natureza'])).zfill(3)
-                logging.info(f"Processando NCM: {ncm} | CST Entrada: {cst_entrada} | CST Saída: {cst_saida} | Natureza: {natureza}")
+                numero = linha['numero']
+                filial = linha['filial']
+                empresa = linha['empresa']
+                regime = linha['regime']
+                classe = linha['classe']
+                logging.info(f"Processando empresa: {empresa}.")
                 
-
+                pg.press('f7')
+                type_text(str(numero))
+                pg.press('tab')
+                type_text(str(filial))
+                pg.press(['enter'] * 4)
+                
+                input("Aperte Enter para continuar...")
+                
     except Exception as e:
         # 7. CAPTURA DE ERRO E NOTIFICAÇÃO
         logging.critical(f"Erro fatal não tratado na automação: {e}", exc_info=True)

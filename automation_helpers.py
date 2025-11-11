@@ -97,7 +97,7 @@ def _capture_click_area(x, y, name_prefix=""):
 
 # --- 4. FUNÇÃO DE ESPERA (Sua Função Integrada) ---
 def esperar_imagem(image_name: str, 
-                   timeout_segundos: int = DEFAULT_WAIT_TIMEOUT, 
+                   timeout: int = DEFAULT_WAIT_TIMEOUT, 
                    region: tuple = None, 
                    confianca: float = DEFAULT_CONFIDENCE,
                    grayscale: bool = DEFAULT_GRAYSCALE):
@@ -108,10 +108,10 @@ def esperar_imagem(image_name: str,
         logging.error(f"Arquivo de imagem não encontrado: {caminho_imagem}")
         raise FileNotFoundError(f"Arquivo de imagem não encontrado: {caminho_imagem}")
     
-    logging.info(f"Aguardando imagem: '{image_name}' (Timeout: {timeout_segundos}s, Confiança: {confianca})")
+    logging.info(f"Aguardando imagem: '{image_name}' (Timeout: {timeout}s, Confiança: {confianca})")
     
     inicio = time.time()
-    while time.time() - inicio < timeout_segundos:
+    while time.time() - inicio < timeout:
         try:
             # Localiza o CENTRO para ser compatível com o clique
             localizacao = pyautogui.locateCenterOnScreen(
@@ -135,11 +135,11 @@ def esperar_imagem(image_name: str,
         time.sleep(0.5)
     
     time.sleep(1.5)
-    logging.error(f"Timeout! Imagem '{image_name}' não foi encontrada em {timeout_segundos}s.")
-    raise TimeoutError(f"A imagem '{image_name}' não foi encontrada em {timeout_segundos}s.")
+    logging.error(f"Timeout! Imagem '{image_name}' não foi encontrada em {timeout}s.")
+    raise TimeoutError(f"A imagem '{image_name}' não foi encontrada em {timeout}s.")
 
 def esperar_imagem_desaparecer(image_name: str, 
-                               timeout_segundos: int = DEFAULT_WAIT_TIMEOUT, 
+                               timeout: int = DEFAULT_WAIT_TIMEOUT, 
                                region: tuple = None, 
                                confianca: float = DEFAULT_CONFIDENCE,
                                grayscale: bool = DEFAULT_GRAYSCALE,
@@ -154,12 +154,12 @@ def esperar_imagem_desaparecer(image_name: str,
         logging.warning(f"Arquivo de imagem não encontrado: {caminho_imagem}. Considerando 'desaparecida'.")
         return True 
 
-    logging.info(f"Aguardando imagem DESAPARECER: '{image_name}' (Timeout: {timeout_segundos}s)")
+    logging.info(f"Aguardando imagem DESAPARECER: '{image_name}' (Timeout: {timeout}s)")
     
     inicio = time.time()
     disappeared_timestamp = None 
 
-    while time.time() - inicio < timeout_segundos:
+    while time.time() - inicio < timeout:
         # 1. Reseta o status a cada loop
         image_found = False 
         
@@ -213,11 +213,11 @@ def esperar_imagem_desaparecer(image_name: str,
         time.sleep(0.5)
         
     # Se o loop terminar (Timeout):
-    logging.error(f"Timeout! Imagem '{image_name}' AINDA ESTÁ VISÍVEL após {timeout_segundos}s.")
-    raise TimeoutError(f"A imagem '{image_name}' não desapareceu em {timeout_segundos}s.")
+    logging.error(f"Timeout! Imagem '{image_name}' AINDA ESTÁ VISÍVEL após {timeout}s.")
+    raise TimeoutError(f"A imagem '{image_name}' não desapareceu em {timeout}s.")
 
 def imagem_esta_presente(image_name: str, 
-                         timeout_segundos: int = DEFAULT_WAIT_TIMEOUT, 
+                         timeout: int = DEFAULT_WAIT_TIMEOUT, 
                          region: tuple = None, 
                          confianca: float = DEFAULT_CONFIDENCE,
                          grayscale: bool = DEFAULT_GRAYSCALE) -> bool:
@@ -234,7 +234,7 @@ def imagem_esta_presente(image_name: str,
         # Se ela não lançar uma exceção, é porque encontrou a imagem.
         esperar_imagem(
             image_name, 
-            timeout_segundos, 
+            timeout, 
             region, 
             confianca, 
             grayscale
@@ -296,7 +296,7 @@ def click_relative(image_name: str,
         # 1. Encontra o centro da imagem-âncora
         anchor_coords = esperar_imagem(
             image_name, 
-            timeout_segundos=timeout, 
+            timeout=timeout, 
             confianca=confidence, 
             region=region, 
             grayscale=grayscale
